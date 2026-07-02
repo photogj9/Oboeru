@@ -1,0 +1,1560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Oboeru — 覚える</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Inter:wght@400;500;600&display=swap');
+
+:root{
+  --paper:#F1ECE2;
+  --paper-raised:#FBF8F2;
+  --ink:#211F1C;
+  --ink-soft:#75695A;
+  --ink-faint:#A79C8B;
+  --line:#DED2BC;
+  --seal:#A33B2E;
+  --seal-soft:#E7D3CC;
+  --moss:#5B6B4C;
+  --moss-soft:#DDE3D1;
+  --gold:#9C7A17;
+  --gold-soft:#F1E4BC;
+  --warn-bg:#F6E4DE;
+  --warn-text:#8C3A22;
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:'Inter',sans-serif;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+}
+
+.jp{ font-family:'Noto Sans JP',sans-serif; }
+
+#root{
+  width:100%;
+  max-width:460px;
+  min-height:100vh;
+  padding:20px 18px 40px;
+  display:flex;
+  flex-direction:column;
+}
+
+.brand{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  margin-bottom:18px;
+}
+.brand-name{
+  font-family:'Noto Sans JP',sans-serif;
+  font-weight:700;
+  font-size:21px;
+  letter-spacing:0.01em;
+}
+.brand-sub{
+  font-size:11px;
+  color:var(--ink-soft);
+  letter-spacing:0.03em;
+  margin-top:2px;
+}
+.nav-link{
+  font-size:12px;
+  font-weight:500;
+  color:var(--ink-soft);
+  text-decoration:underline;
+  cursor:pointer;
+  padding:4px 0;
+}
+
+.mode-switch{
+  display:flex;
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:12px;
+  padding:3px;
+  margin-bottom:16px;
+}
+.mode-btn{
+  flex:1;
+  border:none;
+  background:transparent;
+  padding:9px 6px;
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  font-weight:500;
+  color:var(--ink-soft);
+  border-radius:9px;
+  cursor:pointer;
+}
+.mode-btn.active{
+  background:var(--ink);
+  color:var(--paper-raised);
+}
+
+.stats-row{
+  display:flex;
+  gap:8px;
+  margin-bottom:18px;
+}
+.stat{
+  flex:1;
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:8px 10px;
+  text-align:center;
+}
+.stat-num{
+  font-size:17px;
+  font-weight:600;
+}
+.stat-label{
+  font-size:10px;
+  color:var(--ink-soft);
+  text-transform:uppercase;
+  letter-spacing:0.05em;
+  margin-top:2px;
+  cursor:help;
+}
+
+.card-area{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  position:relative;
+}
+
+.card{
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:20px;
+  padding:36px 24px;
+  min-height:260px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+
+.pos-tag{
+  position:absolute;
+  top:14px;
+  left:16px;
+  font-size:10px;
+  color:var(--ink-faint);
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+}
+.custom-tag{
+  position:absolute;
+  top:14px;
+  right:16px;
+  font-size:10px;
+  color:var(--seal);
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+}
+
+.prompt-en{
+  font-family:'Inter',sans-serif;
+  font-size:26px;
+  font-weight:500;
+  line-height:1.3;
+}
+.prompt-jp{
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:42px;
+  font-weight:700;
+  line-height:1.3;
+}
+.prompt-hira{
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:26px;
+  font-weight:500;
+  color:var(--ink-soft);
+  margin-top:8px;
+}
+
+.reveal-block{
+  margin-top:18px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+}
+.reveal-jp{
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:32px;
+  font-weight:700;
+}
+.reveal-hira{
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:22px;
+  font-weight:500;
+  color:var(--ink-soft);
+}
+.reveal-en{
+  font-size:18px;
+  font-weight:500;
+}
+.audio-btn{
+  border:1px solid var(--line);
+  background:var(--paper);
+  color:var(--ink);
+  width:40px;
+  height:40px;
+  border-radius:50%;
+  cursor:pointer;
+  font-size:16px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.audio-btn:active{transform:scale(0.94);}
+.audio-btn.audio-error{
+  background:var(--warn-bg);
+  border-color:var(--seal);
+  color:var(--warn-text);
+}
+
+.phrase-card{
+  background:var(--paper);
+  border:1px dashed var(--line);
+  border-radius:16px;
+  padding:24px 20px;
+  margin-top:14px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  gap:10px;
+}
+.phrase-label{
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  color:var(--ink-faint);
+}
+.phrase-en{
+  font-size:18px;
+  font-weight:500;
+}
+.phrase-jp{
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:22px;
+  font-weight:700;
+}
+.phrase-hira{
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:17px;
+  font-weight:500;
+  color:var(--ink-soft);
+}
+
+.reveal-cta{
+  margin-top:22px;
+  width:100%;
+  padding:15px;
+  border-radius:14px;
+  border:none;
+  background:var(--ink);
+  color:var(--paper-raised);
+  font-family:'Inter',sans-serif;
+  font-size:15px;
+  font-weight:500;
+  cursor:pointer;
+}
+.reveal-cta:active{transform:scale(0.98);}
+
+.grade-row{
+  margin-top:16px;
+  display:flex;
+  gap:8px;
+}
+.grade-btn{
+  flex:1;
+  padding:14px 4px;
+  border-radius:14px;
+  border:1px solid var(--line);
+  background:var(--paper-raised);
+  font-family:'Inter',sans-serif;
+  font-size:13px;
+  font-weight:500;
+  cursor:pointer;
+  color:var(--ink);
+}
+.grade-btn:active{transform:scale(0.97);}
+.grade-missed{border-color:var(--seal); color:var(--seal); background:var(--seal-soft);}
+.grade-remembered{border-color:var(--moss); color:var(--moss); background:var(--moss-soft);}
+.grade-instant{border-color:var(--gold); color:var(--gold); background:var(--gold-soft);}
+
+.progress-track{
+  height:4px;
+  border-radius:2px;
+  background:var(--line);
+  margin-top:18px;
+  overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  background:var(--ink);
+  border-radius:2px;
+  transition:width 0.25s ease;
+}
+
+.empty-state{
+  text-align:center;
+  padding:40px 12px;
+}
+.empty-title{
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:22px;
+  font-weight:700;
+  margin-bottom:8px;
+}
+.empty-body{
+  font-size:14px;
+  color:var(--ink-soft);
+  line-height:1.5;
+  margin-bottom:20px;
+}
+.empty-btn{
+  padding:13px 22px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:var(--paper-raised);
+  font-size:14px;
+  font-weight:500;
+  cursor:pointer;
+  color:var(--ink);
+}
+
+.footer-link{
+  text-align:center;
+  margin-top:22px;
+  font-size:11px;
+  color:var(--ink-faint);
+  text-decoration:underline;
+  cursor:pointer;
+}
+
+.stamp{
+  position:absolute;
+  top:50%;
+  left:50%;
+  width:96px;
+  height:96px;
+  border:4px solid var(--seal);
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:30px;
+  font-weight:900;
+  color:var(--seal);
+  transform:translate(-50%,-50%) scale(1.6) rotate(-18deg);
+  opacity:0;
+  pointer-events:none;
+  animation:stampIn 0.9s ease forwards;
+}
+@keyframes stampIn{
+  0%{opacity:0; transform:translate(-50%,-50%) scale(1.8) rotate(-18deg);}
+  30%{opacity:0.9; transform:translate(-50%,-50%) scale(0.95) rotate(-10deg);}
+  45%{transform:translate(-50%,-50%) scale(1.05) rotate(-10deg);}
+  70%{opacity:0.9;}
+  100%{opacity:0; transform:translate(-50%,-50%) scale(1.05) rotate(-10deg);}
+}
+
+.loading{
+  text-align:center;
+  padding:60px 12px;
+  color:var(--ink-soft);
+  font-size:14px;
+}
+
+.search-input{
+  width:100%;
+  padding:12px 14px;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:var(--paper-raised);
+  font-family:'Inter',sans-serif;
+  font-size:14px;
+  color:var(--ink);
+  margin-bottom:12px;
+}
+.search-input:focus{outline:1px solid var(--ink-soft);}
+
+.word-list{
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:20px;
+}
+.word-row{
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:10px 12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.word-row-jp{
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:17px;
+  font-weight:700;
+}
+.word-row-hira{
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:13px;
+  color:var(--ink-soft);
+}
+.word-row-en{
+  font-size:12px;
+  color:var(--ink-soft);
+  margin-top:2px;
+}
+.word-row-status{
+  font-size:10px;
+  padding:3px 8px;
+  border-radius:8px;
+  background:var(--paper);
+  border:1px solid var(--line);
+  color:var(--ink-soft);
+  white-space:nowrap;
+}
+.word-count{
+  font-size:12px;
+  color:var(--ink-soft);
+  margin-bottom:10px;
+}
+.word-row-delete{
+  border:1px solid var(--line);
+  background:var(--paper);
+  color:var(--ink-faint);
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  cursor:pointer;
+  font-size:16px;
+  line-height:1;
+  flex-shrink:0;
+}
+.word-row-delete:active{
+  background:var(--warn-bg);
+  color:var(--seal);
+}
+.form-cancel{
+  padding:12px 16px;
+  border-radius:10px;
+  border:1px solid var(--line);
+  background:transparent;
+  color:var(--ink-soft);
+  font-size:14px;
+  font-weight:500;
+  cursor:pointer;
+}
+
+.add-word-toggle{
+  width:100%;
+  padding:13px;
+  border-radius:12px;
+  border:1px dashed var(--line);
+  background:transparent;
+  font-size:14px;
+  font-weight:500;
+  color:var(--ink-soft);
+  cursor:pointer;
+  margin-bottom:16px;
+}
+
+.add-form{
+  background:var(--paper-raised);
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:16px;
+  margin-bottom:20px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.form-label{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:0.04em;
+  color:var(--ink-soft);
+  margin-bottom:4px;
+  display:block;
+}
+.form-input{
+  width:100%;
+  padding:10px 12px;
+  border-radius:9px;
+  border:1px solid var(--line);
+  background:var(--paper);
+  font-family:'Inter',sans-serif;
+  font-size:14px;
+  color:var(--ink);
+}
+.form-input.jp{ font-family:'Noto Sans JP',sans-serif; }
+.form-row-title{
+  font-size:14px;
+  font-weight:500;
+  margin-bottom:2px;
+}
+.form-submit{
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  background:var(--ink);
+  color:var(--paper-raised);
+  font-size:14px;
+  font-weight:500;
+  cursor:pointer;
+  margin-top:4px;
+}
+.form-warning{
+  background:var(--warn-bg);
+  color:var(--warn-text);
+  border-radius:9px;
+  padding:10px 12px;
+  font-size:13px;
+  line-height:1.4;
+}
+.form-success{
+  background:var(--moss-soft);
+  color:var(--moss);
+  border-radius:9px;
+  padding:10px 12px;
+  font-size:13px;
+}
+textarea.form-input{
+  resize:vertical;
+  min-height:56px;
+  line-height:1.5;
+}
+.analysis-box{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+.chip-row{
+  display:flex;
+  flex-wrap:wrap;
+  gap:6px;
+}
+.chip{
+  display:inline-block;
+  padding:5px 10px;
+  border-radius:20px;
+  font-size:13px;
+}
+.chip-known{
+  background:var(--moss-soft);
+  color:var(--moss);
+}
+.unknown-word-card{
+  background:var(--paper);
+  border:1px dashed var(--line);
+  border-radius:10px;
+  padding:12px;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+.unknown-kanji{
+  font-size:18px;
+  font-weight:700;
+}
+</style>
+</head>
+<body>
+<div id="root"><div class="loading">Loading your progress…</div></div>
+
+<script type="application/json" id="vocab-data">
+[
+  {"id":"w01","english":"to remember","kanji":"覚える","hiragana":"おぼえる","partOfSpeech":"verb","exampleJapanese":"単語を覚える","exampleHiragana":"たんごをおぼえる","exampleEnglish":"to memorize vocabulary","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w02","english":"to eat","kanji":"食べる","hiragana":"たべる","partOfSpeech":"verb","exampleJapanese":"朝ご飯を食べる","exampleHiragana":"あさごはんをたべる","exampleEnglish":"to eat breakfast","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w03","english":"to drink","kanji":"飲む","hiragana":"のむ","partOfSpeech":"verb","exampleJapanese":"水を飲む","exampleHiragana":"みずをのむ","exampleEnglish":"to drink water","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w04","english":"to go","kanji":"行く","hiragana":"いく","partOfSpeech":"verb","exampleJapanese":"学校に行く","exampleHiragana":"がっこうにいく","exampleEnglish":"to go to school","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w05","english":"to come","kanji":"来る","hiragana":"くる","partOfSpeech":"verb","exampleJapanese":"友達が来る","exampleHiragana":"ともだちがくる","exampleEnglish":"a friend is coming","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w06","english":"to see / to watch","kanji":"見る","hiragana":"みる","partOfSpeech":"verb","exampleJapanese":"映画を見る","exampleHiragana":"えいがをみる","exampleEnglish":"to watch a movie","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w07","english":"to listen / to ask","kanji":"聞く","hiragana":"きく","partOfSpeech":"verb","exampleJapanese":"音楽を聞く","exampleHiragana":"おんがくをきく","exampleEnglish":"to listen to music","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w08","english":"to speak","kanji":"話す","hiragana":"はなす","partOfSpeech":"verb","exampleJapanese":"日本語を話す","exampleHiragana":"にほんごをはなす","exampleEnglish":"to speak Japanese","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w09","english":"to read","kanji":"読む","hiragana":"よむ","partOfSpeech":"verb","exampleJapanese":"本を読む","exampleHiragana":"ほんをよむ","exampleEnglish":"to read a book","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w10","english":"to write","kanji":"書く","hiragana":"かく","partOfSpeech":"verb","exampleJapanese":"名前を書く","exampleHiragana":"なまえをかく","exampleEnglish":"to write one's name","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w11","english":"to buy","kanji":"買う","hiragana":"かう","partOfSpeech":"verb","exampleJapanese":"服を買う","exampleHiragana":"ふくをかう","exampleEnglish":"to buy clothes","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w12","english":"to wait","kanji":"待つ","hiragana":"まつ","partOfSpeech":"verb","exampleJapanese":"ここで待つ","exampleHiragana":"ここでまつ","exampleEnglish":"to wait here","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w13","english":"to understand","kanji":"分かる","hiragana":"わかる","partOfSpeech":"verb","exampleJapanese":"意味が分かる","exampleHiragana":"いみがわかる","exampleEnglish":"to understand the meaning","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w14","english":"to return home","kanji":"帰る","hiragana":"かえる","partOfSpeech":"verb","exampleJapanese":"家に帰る","exampleHiragana":"いえにかえる","exampleEnglish":"to go home","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w15","english":"to rest","kanji":"休む","hiragana":"やすむ","partOfSpeech":"verb","exampleJapanese":"少し休む","exampleHiragana":"すこしやすむ","exampleEnglish":"to rest a little","tags":["verb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w16","english":"person","kanji":"人","hiragana":"ひと","partOfSpeech":"noun","exampleJapanese":"あの人は先生です","exampleHiragana":"あのひとはせんせいです","exampleEnglish":"that person is a teacher","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w17","english":"time","kanji":"時間","hiragana":"じかん","partOfSpeech":"noun","exampleJapanese":"時間がない","exampleHiragana":"じかんがない","exampleEnglish":"there's no time","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w18","english":"school","kanji":"学校","hiragana":"がっこう","partOfSpeech":"noun","exampleJapanese":"学校は楽しい","exampleHiragana":"がっこうはたのしい","exampleEnglish":"school is fun","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w19","english":"friend","kanji":"友達","hiragana":"ともだち","partOfSpeech":"noun","exampleJapanese":"友達と話す","exampleHiragana":"ともだちとはなす","exampleEnglish":"to talk with a friend","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w20","english":"family","kanji":"家族","hiragana":"かぞく","partOfSpeech":"noun","exampleJapanese":"家族が好き","exampleHiragana":"かぞくがすき","exampleEnglish":"I love my family","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w21","english":"work / job","kanji":"仕事","hiragana":"しごと","partOfSpeech":"noun","exampleJapanese":"仕事に行く","exampleHiragana":"しごとにいく","exampleEnglish":"to go to work","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w22","english":"today","kanji":"今日","hiragana":"きょう","partOfSpeech":"noun","exampleJapanese":"今日は暑い","exampleHiragana":"きょうはあつい","exampleEnglish":"today is hot","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w23","english":"tomorrow","kanji":"明日","hiragana":"あした","partOfSpeech":"noun","exampleJapanese":"明日会いましょう","exampleHiragana":"あしたあいましょう","exampleEnglish":"let's meet tomorrow","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w24","english":"yesterday","kanji":"昨日","hiragana":"きのう","partOfSpeech":"noun","exampleJapanese":"昨日は忙しかった","exampleHiragana":"きのうはいそがしかった","exampleEnglish":"yesterday was busy","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w25","english":"water","kanji":"水","hiragana":"みず","partOfSpeech":"noun","exampleJapanese":"水がほしい","exampleHiragana":"みずがほしい","exampleEnglish":"I want water","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w26","english":"telephone","kanji":"電話","hiragana":"でんわ","partOfSpeech":"noun","exampleJapanese":"電話をかける","exampleHiragana":"でんわをかける","exampleEnglish":"to make a phone call","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w27","english":"car","kanji":"車","hiragana":"くるま","partOfSpeech":"noun","exampleJapanese":"車を運転する","exampleHiragana":"くるまをうんてんする","exampleEnglish":"to drive a car","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w28","english":"book","kanji":"本","hiragana":"ほん","partOfSpeech":"noun","exampleJapanese":"面白い本","exampleHiragana":"おもしろいほん","exampleEnglish":"an interesting book","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w29","english":"money","kanji":"お金","hiragana":"おかね","partOfSpeech":"noun","exampleJapanese":"お金がない","exampleHiragana":"おかねがない","exampleEnglish":"I have no money","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w30","english":"company","kanji":"会社","hiragana":"かいしゃ","partOfSpeech":"noun","exampleJapanese":"会社で働く","exampleHiragana":"かいしゃではたらく","exampleEnglish":"to work at a company","tags":["noun"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w31","english":"big","kanji":"大きい","hiragana":"おおきい","partOfSpeech":"adjective","exampleJapanese":"大きい犬","exampleHiragana":"おおきいいぬ","exampleEnglish":"a big dog","tags":["adjective"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w32","english":"small","kanji":"小さい","hiragana":"ちいさい","partOfSpeech":"adjective","exampleJapanese":"小さい部屋","exampleHiragana":"ちいさいへや","exampleEnglish":"a small room","tags":["adjective"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w33","english":"new","kanji":"新しい","hiragana":"あたらしい","partOfSpeech":"adjective","exampleJapanese":"新しい靴","exampleHiragana":"あたらしいくつ","exampleEnglish":"new shoes","tags":["adjective"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w34","english":"good","kanji":"良い","hiragana":"いい","partOfSpeech":"adjective","exampleJapanese":"いい天気","exampleHiragana":"いいてんき","exampleEnglish":"good weather","tags":["adjective"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w35","english":"fun / enjoyable","kanji":"楽しい","hiragana":"たのしい","partOfSpeech":"adjective","exampleJapanese":"旅行は楽しい","exampleHiragana":"りょこうはたのしい","exampleEnglish":"traveling is fun","tags":["adjective"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w36","english":"difficult","kanji":"難しい","hiragana":"むずかしい","partOfSpeech":"adjective","exampleJapanese":"日本語は難しい","exampleHiragana":"にほんごはむずかしい","exampleEnglish":"Japanese is difficult","tags":["adjective"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w37","english":"important","kanji":"大切","hiragana":"たいせつ","partOfSpeech":"adjective","exampleJapanese":"家族は大切です","exampleHiragana":"かぞくはたいせつです","exampleEnglish":"family is important","tags":["adjective"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w38","english":"a little","kanji":"少し","hiragana":"すこし","partOfSpeech":"adverb","exampleJapanese":"少し待って","exampleHiragana":"すこしまって","exampleEnglish":"wait a little","tags":["adverb"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w39","english":"thank you","kanji":"ありがとう","hiragana":"ありがとう","partOfSpeech":"expression","exampleJapanese":"手伝ってくれてありがとう","exampleHiragana":"てつだってくれてありがとう","exampleEnglish":"thanks for helping","tags":["expression"],"source":"starter-40","dateAdded":"2026-07-02"},
+  {"id":"w40","english":"excuse me / sorry","kanji":"すみません","hiragana":"すみません","partOfSpeech":"expression","exampleJapanese":"すみません、時間ですか","exampleHiragana":"すみません、じかんですか","exampleEnglish":"excuse me, do you have the time?","tags":["expression"],"source":"starter-40","dateAdded":"2026-07-02"}
+]
+</script>
+
+<script type="application/json" id="phrase-data">
+[{"id":"p01","japanese":"単語を覚える","hiragana":"たんごをおぼえる","english":"to memorize vocabulary","wordIds":["w01"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p02","japanese":"朝ご飯を食べる","hiragana":"あさごはんをたべる","english":"to eat breakfast","wordIds":["w02"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p03","japanese":"水を飲む","hiragana":"みずをのむ","english":"to drink water","wordIds":["w25","w03"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p04","japanese":"学校に行く","hiragana":"がっこうにいく","english":"to go to school","wordIds":["w18","w04"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p05","japanese":"友達が来る","hiragana":"ともだちがくる","english":"a friend is coming","wordIds":["w19","w05"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p06","japanese":"映画を見る","hiragana":"えいがをみる","english":"to watch a movie","wordIds":["w06"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p07","japanese":"音楽を聞く","hiragana":"おんがくをきく","english":"to listen to music","wordIds":["w07"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p08","japanese":"日本語を話す","hiragana":"にほんごをはなす","english":"to speak Japanese","wordIds":["w08"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p09","japanese":"本を読む","hiragana":"ほんをよむ","english":"to read a book","wordIds":["w28","w09"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p10","japanese":"名前を書く","hiragana":"なまえをかく","english":"to write one's name","wordIds":["w10"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p11","japanese":"服を買う","hiragana":"ふくをかう","english":"to buy clothes","wordIds":["w11"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p12","japanese":"ここで待つ","hiragana":"ここでまつ","english":"to wait here","wordIds":["w12"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p13","japanese":"意味が分かる","hiragana":"いみがわかる","english":"to understand the meaning","wordIds":["w13"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p14","japanese":"家に帰る","hiragana":"いえにかえる","english":"to go home","wordIds":["w14"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p15","japanese":"少し休む","hiragana":"すこしやすむ","english":"to rest a little","wordIds":["w38","w15"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p16","japanese":"人が多い","hiragana":"ひとがおおい","english":"there are many people","wordIds":["w16"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p17","japanese":"時間がない","hiragana":"じかんがない","english":"there's no time","wordIds":["w17"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p18","japanese":"学校は楽しい","hiragana":"がっこうはたのしい","english":"school is fun","wordIds":["w18","w35"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p19","japanese":"友達と話す","hiragana":"ともだちとはなす","english":"to talk with a friend","wordIds":["w19","w08"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p20","japanese":"家族が大切です","hiragana":"かぞくがたいせつです","english":"family is important","wordIds":["w20","w37"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p21","japanese":"仕事に行く","hiragana":"しごとにいく","english":"to go to work","wordIds":["w21","w04"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p22","japanese":"今日は暑い","hiragana":"きょうはあつい","english":"today is hot","wordIds":["w22"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p23","japanese":"明日会う","hiragana":"あしたあう","english":"to meet tomorrow","wordIds":[],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p24","japanese":"昨日は忙しい","hiragana":"きのうはいそがしい","english":"yesterday was busy","wordIds":["w24"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p25","japanese":"水がほしい","hiragana":"みずがほしい","english":"I want water","wordIds":["w25"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p26","japanese":"電話をかける","hiragana":"でんわをかける","english":"to make a phone call","wordIds":["w26"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p27","japanese":"新しい車","hiragana":"あたらしいくるま","english":"a new car","wordIds":["w33","w27"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p28","japanese":"面白い本","hiragana":"おもしろいほん","english":"an interesting book","wordIds":["w28"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p29","japanese":"お金がない","hiragana":"おかねがない","english":"I have no money","wordIds":["w29"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p30","japanese":"会社で働く","hiragana":"かいしゃではたらく","english":"to work at a company","wordIds":["w30"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p31","japanese":"大きい犬","hiragana":"おおきいいぬ","english":"a big dog","wordIds":["w31"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p32","japanese":"小さい部屋","hiragana":"ちいさいへや","english":"a small room","wordIds":["w32"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p33","japanese":"新しい靴","hiragana":"あたらしいくつ","english":"new shoes","wordIds":["w33"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p34","japanese":"いい天気","hiragana":"いいてんき","english":"good weather","wordIds":[],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p35","japanese":"旅行は楽しい","hiragana":"りょこうはたのしい","english":"traveling is fun","wordIds":["w35"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p36","japanese":"日本語は難しい","hiragana":"にほんごはむずかしい","english":"Japanese is difficult","wordIds":["w36"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p37","japanese":"家族は大切です","hiragana":"かぞくはたいせつです","english":"family is important","wordIds":["w20","w37"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p38","japanese":"少し待つ","hiragana":"すこしまつ","english":"to wait a little","wordIds":["w38","w12"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p39","japanese":"手伝ってありがとう","hiragana":"てつだってありがとう","english":"thanks for helping","wordIds":["w39"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"},{"id":"p40","japanese":"すみません、今何時ですか","hiragana":"すみません、いまなんじですか","english":"excuse me, what time is it?","wordIds":["w40"],"tags":[],"source":"starter-40","dateAdded":"2026-07-02"}]
+</script>
+
+<script>
+const BASE_VOCAB = JSON.parse(document.getElementById("vocab-data").textContent);
+const BASE_PHRASES = JSON.parse(document.getElementById("phrase-data").textContent);
+
+const PARTICLES = ["ません","ました","ましょう","でした","です","という","けれど","しかし","でも","ながら","たり","ため","ので","のに","から","まで","より","だけ","ばかり","って","ちゃ","ます",
+  "は","が","を","に","で","と","も","の","へ","や","ね","よ","わ","だ","ば"].sort((a,b) => b.length - a.length);
+const PUNCTUATION = new Set(["、","。","！","？","「","」","『","』","・","!","?",","]);
+const isKanji = ch => !!ch && /[\u4e00-\u9faf\u3400-\u4dbf]/.test(ch);
+
+function analyzePhrase(text, vocabPool){
+  const dict = vocabPool.filter(w => w.kanji).slice().sort((a,b) => b.kanji.length - a.kanji.length);
+  let i = 0;
+  const knownIds = [];
+  const unknownSpans = [];
+  let cur = "";
+  while (i < text.length){
+    let matched = null;
+    for (const w of dict){
+      if (text.startsWith(w.kanji, i)){
+        const firstIsKanji = isKanji(w.kanji[0]);
+        const lastIsKanji = isKanji(w.kanji[w.kanji.length - 1]);
+        const before = text[i - 1];
+        const after = text[i + w.kanji.length];
+        if (firstIsKanji && isKanji(before)) continue;
+        if (lastIsKanji && isKanji(after)) continue;
+        matched = w;
+        break;
+      }
+    }
+    if (matched){
+      if (cur){ unknownSpans.push(cur); cur = ""; }
+      if (!knownIds.includes(matched.id)) knownIds.push(matched.id);
+      i += matched.kanji.length;
+      continue;
+    }
+    if (PUNCTUATION.has(text[i])){
+      if (cur){ unknownSpans.push(cur); cur = ""; }
+      i += 1;
+      continue;
+    }
+    if (text[i] === "か" && i === text.length - 1){
+      if (cur){ unknownSpans.push(cur); cur = ""; }
+      i += 1;
+      continue;
+    }
+    let p = null;
+    for (const part of PARTICLES){ if (text.startsWith(part, i)){ p = part; break; } }
+    if (p){
+      if (cur){ unknownSpans.push(cur); cur = ""; }
+      i += p.length;
+      continue;
+    }
+    cur += text[i];
+    i += 1;
+  }
+  if (cur) unknownSpans.push(cur);
+  return { knownIds, unknownSpans };
+}
+const SESSION_GOAL = 20;
+
+let ALL_WORDS = [];
+let customVocab = [];
+let baseOverrides = {};
+let baseDeleted = [];
+let idCounter = BASE_VOCAB.length + 1;
+
+let PHRASES = [];
+let phraseIdCounter = BASE_PHRASES.length + 1;
+
+let state = {
+  view: "study",
+  mode: "vocab",
+  progress: {},
+  queue: [],
+  qIndex: 0,
+  revealed: false,
+  sessionReviewed: 0,
+  librarySearch: "",
+  formMode: null,
+  editingId: null,
+  addFormMessage: null,
+  phraseSearch: "",
+  phraseFormMode: null,
+  phraseEditingId: null,
+  phraseFormMessage: null,
+  phraseAnalysis: null,
+  phraseDraft: null
+};
+
+function rebuildAllWords(){
+  const effectiveBase = BASE_VOCAB
+    .filter(w => !baseDeleted.includes(w.id))
+    .map(w => baseOverrides[w.id] ? Object.assign({}, w, baseOverrides[w.id]) : w);
+  ALL_WORDS = effectiveBase.concat(customVocab);
+}
+
+function currentPool(){
+  return state.mode === "phrase" ? PHRASES : ALL_WORDS;
+}
+
+let cachedVoices = [];
+if ("speechSynthesis" in window){
+  const loadVoices = () => { cachedVoices = speechSynthesis.getVoices(); };
+  loadVoices();
+  speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+function speak(text, btn){
+  if (!("speechSynthesis" in window)){
+    flashAudioNote(btn);
+    return;
+  }
+  try{
+    speechSynthesis.resume();
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "ja-JP";
+    const jaVoice = cachedVoices.find(v => v.lang === "ja-JP") || cachedVoices.find(v => v.lang && v.lang.startsWith("ja"));
+    if (jaVoice) u.voice = jaVoice;
+    u.rate = 0.9;
+    let started = false;
+    u.onstart = () => { started = true; };
+    u.onerror = () => { flashAudioNote(btn); };
+    speechSynthesis.speak(u);
+    setTimeout(() => { if (!started) flashAudioNote(btn); }, 1200);
+  }catch(e){
+    flashAudioNote(btn);
+  }
+}
+
+function flashAudioNote(btn){
+  if (!btn) return;
+  const original = btn.textContent;
+  btn.textContent = "!";
+  btn.classList.add("audio-error");
+  setTimeout(() => {
+    btn.textContent = original;
+    btn.classList.remove("audio-error");
+  }, 1500);
+}
+
+async function loadProgress(){
+  try{
+    const res = await window.storage.get("oboeru-progress", false);
+    return res ? JSON.parse(res.value) : {};
+  }catch(e){ return {}; }
+}
+async function saveProgress(progress){
+  try{ await window.storage.set("oboeru-progress", JSON.stringify(progress), false); }
+  catch(e){ console.error("save failed", e); }
+}
+async function loadCustomVocab(){
+  try{
+    const res = await window.storage.get("oboeru-custom-vocab", false);
+    return res ? JSON.parse(res.value) : [];
+  }catch(e){ return []; }
+}
+async function saveCustomVocab(list){
+  try{ await window.storage.set("oboeru-custom-vocab", JSON.stringify(list), false); }
+  catch(e){ console.error("save failed", e); }
+}
+async function loadBaseOverrides(){
+  try{
+    const res = await window.storage.get("oboeru-base-overrides", false);
+    return res ? JSON.parse(res.value) : {};
+  }catch(e){ return {}; }
+}
+async function saveBaseOverrides(obj){
+  try{ await window.storage.set("oboeru-base-overrides", JSON.stringify(obj), false); }
+  catch(e){ console.error("save failed", e); }
+}
+async function loadBaseDeleted(){
+  try{
+    const res = await window.storage.get("oboeru-base-deleted", false);
+    return res ? JSON.parse(res.value) : [];
+  }catch(e){ return []; }
+}
+async function saveBaseDeleted(arr){
+  try{ await window.storage.set("oboeru-base-deleted", JSON.stringify(arr), false); }
+  catch(e){ console.error("save failed", e); }
+}
+async function loadIdCounter(){
+  try{
+    const res = await window.storage.get("oboeru-id-counter", false);
+    return res ? JSON.parse(res.value) : (BASE_VOCAB.length + 1);
+  }catch(e){ return BASE_VOCAB.length + 1; }
+}
+async function saveIdCounter(n){
+  try{ await window.storage.set("oboeru-id-counter", JSON.stringify(n), false); }
+  catch(e){ console.error("save failed", e); }
+}
+async function loadPhrases(){
+  try{
+    const res = await window.storage.get("oboeru-phrases", false);
+    return res ? JSON.parse(res.value) : null;
+  }catch(e){ return null; }
+}
+async function savePhrases(list){
+  try{ await window.storage.set("oboeru-phrases", JSON.stringify(list), false); }
+  catch(e){ console.error("save failed", e); }
+}
+async function loadPhraseIdCounter(){
+  try{
+    const res = await window.storage.get("oboeru-phrase-id-counter", false);
+    return res ? JSON.parse(res.value) : (BASE_PHRASES.length + 1);
+  }catch(e){ return BASE_PHRASES.length + 1; }
+}
+async function savePhraseIdCounter(n){
+  try{ await window.storage.set("oboeru-phrase-id-counter", JSON.stringify(n), false); }
+  catch(e){ console.error("save failed", e); }
+}
+
+function defaultRecord(){
+  return { reviews:0, correct:0, lastReviewed:null, nextReview:0, ease:2.5, interval:0, status:"New" };
+}
+function ensureAllCards(progress){
+  ALL_WORDS.concat(PHRASES).forEach(c => { if (!progress[c.id]) progress[c.id] = defaultRecord(); });
+  return progress;
+}
+
+function buildQueue(all){
+  const pool = currentPool();
+  const now = Date.now();
+  let due = pool.filter(c => (state.progress[c.id].nextReview || 0) <= now);
+  due.sort((a,b) => (state.progress[a.id].nextReview - state.progress[b.id].nextReview) || (pool.indexOf(a) - pool.indexOf(b)));
+  if (!all) due = due.slice(0, SESSION_GOAL);
+  state.queue = due.map(c => c.id);
+  state.qIndex = 0;
+  state.revealed = false;
+  state.sessionReviewed = 0;
+}
+
+function counts(){
+  const pool = currentPool();
+  const c = { New:0, Learning:0, Review:0 };
+  pool.forEach(card => { c[state.progress[card.id].status]++; });
+  return c;
+}
+
+function grade(quality){
+  const id = state.queue[state.qIndex];
+  const rec = state.progress[id];
+  rec.reviews += 1;
+  rec.lastReviewed = Date.now();
+  if (quality !== "again") rec.correct += 1;
+
+  if (quality === "again"){
+    rec.ease = Math.max(1.3, rec.ease - 0.2);
+    rec.interval = 0;
+    rec.status = "Learning";
+    rec.nextReview = Date.now();
+    const requeueAt = Math.min(state.qIndex + 4, state.queue.length);
+    state.queue.splice(requeueAt, 0, id);
+  } else if (quality === "good"){
+    rec.interval = rec.interval === 0 ? 1 : Math.round(rec.interval * rec.ease);
+    rec.status = "Review";
+    rec.nextReview = Date.now() + rec.interval * 86400000;
+  } else if (quality === "easy"){
+    rec.interval = rec.interval === 0 ? 3 : Math.round(rec.interval * rec.ease * 1.3);
+    rec.ease = rec.ease + 0.15;
+    rec.status = "Review";
+    rec.nextReview = Date.now() + rec.interval * 86400000;
+  }
+
+  saveProgress(state.progress);
+  state.sessionReviewed += 1;
+  state.qIndex += 1;
+  state.revealed = false;
+
+  render();
+  if (quality === "easy") setTimeout(() => showStamp("覚"), 20);
+}
+
+function showStamp(char){
+  const area = document.getElementById("card-area");
+  if (!area) return;
+  const el = document.createElement("div");
+  el.className = "stamp";
+  el.textContent = char;
+  area.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+
+function switchMode(mode){
+  state.mode = mode;
+  buildQueue(false);
+  render();
+}
+function reveal(){ state.revealed = true; render(); }
+
+function goLibrary(){ state.view = "library"; state.formMode = null; state.editingId = null; state.addFormMessage = null; render(); }
+function goStudy(){ state.view = "study"; render(); }
+function goPhrases(){ state.view = "phrases"; state.phraseFormMode = null; state.phraseEditingId = null; state.phraseFormMessage = null; render(); }
+
+function updateSearch(val){
+  state.librarySearch = val;
+  render();
+  const input = document.getElementById("lib-search-input");
+  if (input){ input.focus(); input.value = val; input.setSelectionRange(val.length, val.length); }
+}
+
+function openAddForm(){
+  state.formMode = "add";
+  state.editingId = null;
+  state.addFormMessage = null;
+  render();
+  const el = document.getElementById("word-form");
+  if (el) el.scrollIntoView({ behavior:"smooth", block:"start" });
+}
+function openEditForm(id){
+  state.formMode = "edit";
+  state.editingId = id;
+  state.addFormMessage = null;
+  render();
+  const el = document.getElementById("word-form");
+  if (el) el.scrollIntoView({ behavior:"smooth", block:"start" });
+}
+function closeForm(){
+  state.formMode = null;
+  state.editingId = null;
+  state.addFormMessage = null;
+  render();
+}
+
+function nextId(){
+  const id = "w" + String(idCounter).padStart(2, "0");
+  idCounter += 1;
+  saveIdCounter(idCounter);
+  return id;
+}
+
+async function submitWordForm(ev){
+  ev.preventDefault();
+  const f = ev.target;
+  const english = f.english.value.trim();
+  const kanji = f.kanji.value.trim();
+  const hiragana = f.hiragana.value.trim();
+  const partOfSpeech = f.partOfSpeech.value.trim();
+  const exampleJapanese = f.exampleJapanese.value.trim();
+  const exampleHiragana = f.exampleHiragana.value.trim();
+  const exampleEnglish = f.exampleEnglish.value.trim();
+  const tagsRaw = f.tags.value.trim();
+  const source = f.source.value.trim();
+
+  if (!english || !kanji || !hiragana){
+    state.addFormMessage = { type:"warning", text:"English, kanji, and hiragana are required." };
+    render();
+    return;
+  }
+
+  const dup = ALL_WORDS.find(w => w.kanji === kanji && w.hiragana === hiragana && w.id !== state.editingId);
+  if (dup){
+    state.addFormMessage = { type:"warning", text:`Already in your library as "${dup.english}" (${dup.kanji} / ${dup.hiragana}). Not saved.` };
+    render();
+    return;
+  }
+
+  const fields = {
+    english, kanji, hiragana,
+    partOfSpeech: partOfSpeech || undefined,
+    exampleJapanese: exampleJapanese || undefined,
+    exampleHiragana: exampleHiragana || undefined,
+    exampleEnglish: exampleEnglish || undefined,
+    tags: tagsRaw ? tagsRaw.split(",").map(t => t.trim()).filter(Boolean) : [],
+    source: source || undefined
+  };
+
+  if (state.formMode === "edit"){
+    const id = state.editingId;
+    const customIdx = customVocab.findIndex(w => w.id === id);
+    if (customIdx !== -1){
+      customVocab[customIdx] = Object.assign({}, customVocab[customIdx], fields);
+      await saveCustomVocab(customVocab);
+    } else {
+      baseOverrides[id] = fields;
+      await saveBaseOverrides(baseOverrides);
+    }
+    rebuildAllWords();
+    state.addFormMessage = { type:"success", text:`Saved changes to "${fields.english}" (${fields.kanji}).` };
+  } else {
+    const newWord = Object.assign({ id: nextId(), dateAdded: new Date().toISOString() }, fields);
+    if (!newWord.source) newWord.source = "custom";
+    customVocab.push(newWord);
+    rebuildAllWords();
+    state.progress[newWord.id] = defaultRecord();
+    await saveCustomVocab(customVocab);
+    await saveProgress(state.progress);
+    state.addFormMessage = { type:"success", text:`Added "${newWord.english}" (${newWord.kanji}) to your library.` };
+  }
+
+  state.formMode = null;
+  state.editingId = null;
+  render();
+}
+
+async function deleteWord(id){
+  const word = ALL_WORDS.find(w => w.id === id);
+  if (!word) return;
+  if (!confirm(`Delete "${word.english}" (${word.kanji})? This can't be undone.`)) return;
+
+  const customIdx = customVocab.findIndex(w => w.id === id);
+  if (customIdx !== -1){
+    customVocab.splice(customIdx, 1);
+    await saveCustomVocab(customVocab);
+  } else {
+    if (!baseDeleted.includes(id)) baseDeleted.push(id);
+    await saveBaseDeleted(baseDeleted);
+    delete baseOverrides[id];
+    await saveBaseOverrides(baseOverrides);
+  }
+
+  rebuildAllWords();
+  buildQueue(false);
+  state.formMode = null;
+  state.editingId = null;
+  state.addFormMessage = { type:"success", text:`Deleted "${word.english}" (${word.kanji}).` };
+  render();
+}
+
+async function resetProgress(){
+  if (!confirm("Reset all progress? This clears every review history and starts fresh. Your custom words and phrases stay.")) return;
+  try{ await window.storage.delete("oboeru-progress", false); }catch(e){}
+  state.progress = ensureAllCards({});
+  buildQueue(false);
+  render();
+}
+
+function nextPhraseId(){
+  const id = "p" + String(phraseIdCounter).padStart(2, "0");
+  phraseIdCounter += 1;
+  savePhraseIdCounter(phraseIdCounter);
+  return id;
+}
+
+function capturePhraseDraft(){
+  const f = document.getElementById("phrase-form");
+  if (!f) return;
+  state.phraseDraft = {
+    japanese: f.japanese.value,
+    hiragana: f.hiragana.value,
+    english: f.english.value,
+    tags: f.tags.value,
+    source: f.source.value
+  };
+}
+
+function openAddPhraseForm(){
+  state.phraseFormMode = "add";
+  state.phraseEditingId = null;
+  state.phraseFormMessage = null;
+  state.phraseAnalysis = null;
+  state.phraseDraft = { japanese:"", hiragana:"", english:"", tags:"", source:"" };
+  render();
+  const el = document.getElementById("phrase-form");
+  if (el) el.scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+function openEditPhraseForm(id){
+  const phrase = PHRASES.find(p => p.id === id);
+  if (!phrase) return;
+  state.phraseFormMode = "edit";
+  state.phraseEditingId = id;
+  state.phraseFormMessage = null;
+  state.phraseDraft = {
+    japanese: phrase.japanese,
+    hiragana: phrase.hiragana,
+    english: phrase.english,
+    tags: (phrase.tags || []).join(", "),
+    source: phrase.source || ""
+  };
+  state.phraseAnalysis = analyzePhrase(phrase.japanese, ALL_WORDS);
+  render();
+  const el = document.getElementById("phrase-form");
+  if (el) el.scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+function closePhraseForm(){
+  state.phraseFormMode = null;
+  state.phraseEditingId = null;
+  state.phraseFormMessage = null;
+  state.phraseAnalysis = null;
+  state.phraseDraft = null;
+  render();
+}
+
+function checkPhraseWords(){
+  capturePhraseDraft();
+  state.phraseAnalysis = analyzePhrase(state.phraseDraft.japanese, ALL_WORDS);
+  render();
+}
+
+async function addUnknownWord(idx){
+  capturePhraseDraft();
+  const span = state.phraseAnalysis.unknownSpans[idx];
+  const hiraEl = document.getElementById("unk-hira-" + idx);
+  const enEl = document.getElementById("unk-en-" + idx);
+  const hiragana = hiraEl ? hiraEl.value.trim() : "";
+  const english = enEl ? enEl.value.trim() : "";
+
+  if (!hiragana || !english){
+    alert("Fill in both the hiragana reading and English meaning before adding this word.");
+    return;
+  }
+
+  const dup = ALL_WORDS.find(w => w.kanji === span && w.hiragana === hiragana);
+  if (dup){
+    alert(`"${span}" is already in your library as "${dup.english}".`);
+  } else {
+    const newWord = {
+      id: nextId(),
+      english, kanji: span, hiragana,
+      source: "from-phrase",
+      dateAdded: new Date().toISOString(),
+      tags: []
+    };
+    customVocab.push(newWord);
+    rebuildAllWords();
+    state.progress[newWord.id] = defaultRecord();
+    await saveCustomVocab(customVocab);
+    await saveProgress(state.progress);
+  }
+
+  state.phraseAnalysis = analyzePhrase(state.phraseDraft.japanese, ALL_WORDS);
+  render();
+}
+
+function ignoreUnknownWord(idx){
+  capturePhraseDraft();
+  state.phraseAnalysis.unknownSpans.splice(idx, 1);
+  render();
+}
+
+async function submitPhraseForm(ev){
+  ev.preventDefault();
+  const f = ev.target;
+  const japanese = f.japanese.value.trim();
+  const hiragana = f.hiragana.value.trim();
+  const english = f.english.value.trim();
+  const tagsRaw = f.tags.value.trim();
+  const source = f.source.value.trim();
+
+  if (!japanese || !hiragana || !english){
+    state.phraseFormMessage = { type:"warning", text:"Japanese, hiragana, and English are all required." };
+    render();
+    return;
+  }
+
+  const wordIds = analyzePhrase(japanese, ALL_WORDS).knownIds;
+  const fields = {
+    japanese, hiragana, english, wordIds,
+    tags: tagsRaw ? tagsRaw.split(",").map(t => t.trim()).filter(Boolean) : [],
+    source: source || undefined
+  };
+
+  if (state.phraseFormMode === "edit"){
+    const idx = PHRASES.findIndex(p => p.id === state.phraseEditingId);
+    if (idx !== -1) PHRASES[idx] = Object.assign({}, PHRASES[idx], fields);
+    state.phraseFormMessage = { type:"success", text:`Saved changes to "${english}".` };
+  } else {
+    const newPhrase = Object.assign({ id: nextPhraseId(), dateAdded: new Date().toISOString() }, fields);
+    PHRASES.push(newPhrase);
+    state.progress[newPhrase.id] = defaultRecord();
+    await saveProgress(state.progress);
+    state.phraseFormMessage = { type:"success", text:`Added "${english}" to your phrases.` };
+  }
+
+  await savePhrases(PHRASES);
+  state.phraseFormMode = null;
+  state.phraseEditingId = null;
+  state.phraseAnalysis = null;
+  state.phraseDraft = null;
+  render();
+}
+
+async function deletePhrase(id){
+  const phrase = PHRASES.find(p => p.id === id);
+  if (!phrase) return;
+  if (!confirm(`Delete "${phrase.english}"? This can't be undone.`)) return;
+  PHRASES = PHRASES.filter(p => p.id !== id);
+  await savePhrases(PHRASES);
+  if (state.mode === "phrase") buildQueue(false);
+  state.phraseFormMode = null;
+  state.phraseEditingId = null;
+  state.phraseFormMessage = { type:"success", text:`Deleted "${phrase.english}".` };
+  render();
+}
+
+function esc(s){
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function renderHeader(){
+  const links = [];
+  if (state.view !== "study") links.push('<span class="nav-link" onclick="goStudy()">Study</span>');
+  if (state.view !== "library") links.push('<span class="nav-link" onclick="goLibrary()">Words</span>');
+  if (state.view !== "phrases") links.push('<span class="nav-link" onclick="goPhrases()">Phrases</span>');
+
+  let subtitle = "Library";
+  if (state.view === "phrases") subtitle = "Phrases";
+  if (state.view === "study"){
+    subtitle = state.mode === "vocab" ? "English → Japanese"
+      : state.mode === "reading" ? "Japanese → English"
+      : "Phrase recall";
+  }
+
+  return `
+    <div class="brand">
+      <div>
+        <div class="brand-name jp">覚える Oboeru</div>
+        <div class="brand-sub">${subtitle}</div>
+      </div>
+      <div style="display:flex; flex-direction:column; align-items:flex-end; gap:2px;">${links.join("")}</div>
+    </div>
+  `;
+}
+
+function renderStudyCardArea(){
+  const pool = currentPool();
+
+  if (state.qIndex >= state.queue.length){
+    const stillDue = pool.some(card => (state.progress[card.id].nextReview || 0) <= Date.now());
+    if (state.sessionReviewed === 0 && state.queue.length === 0){
+      if (pool.length === 0){
+        return state.mode === "phrase" ? `
+          <div class="empty-state">
+            <div class="empty-title">No phrases yet</div>
+            <div class="empty-body">Add a phrase and it'll show up here for review.</div>
+            <button class="empty-btn" onclick="goPhrases()">Add a phrase</button>
+          </div>` : `
+          <div class="empty-state">
+            <div class="empty-title">No words yet</div>
+            <div class="empty-body">Add a word to your library to start studying.</div>
+            <button class="empty-btn" onclick="goLibrary()">Go to library</button>
+          </div>`;
+      }
+      return `
+        <div class="empty-state">
+          <div class="empty-title">All caught up</div>
+          <div class="empty-body">Nothing's due right now. Come back later, or review early if you want more practice today.</div>
+          <button class="empty-btn" onclick="buildQueue(true); render();">Review anyway</button>
+        </div>`;
+    }
+    return `
+      <div class="empty-state">
+        <div class="empty-title">Session complete</div>
+        <div class="empty-body">You reviewed ${state.sessionReviewed} card${state.sessionReviewed === 1 ? "" : "s"} just now.</div>
+        <button class="empty-btn" onclick="buildQueue(${stillDue}); render();">${stillDue ? "Continue reviewing" : "Study more anyway"}</button>
+      </div>`;
+  }
+
+  const id = state.queue[state.qIndex];
+  const card = pool.find(x => x.id === id);
+  const isPhrase = state.mode === "phrase";
+  const isVocab = state.mode === "vocab";
+  const jpText = isPhrase ? card.japanese : card.kanji;
+
+  const promptHtml = (isVocab || isPhrase)
+    ? `<div class="prompt-en">${esc(card.english)}</div>`
+    : `<div class="prompt-jp jp">${esc(card.kanji)}</div><div class="prompt-hira jp">${esc(card.hiragana)}</div>`;
+
+  let revealHtml;
+  if (state.revealed){
+    revealHtml = `
+      <div class="reveal-block">
+        ${(isVocab || isPhrase) ? `
+          <div class="reveal-jp jp" style="${isPhrase ? 'font-size:26px;' : ''}">${esc(jpText)}</div>
+          <div class="reveal-hira jp">${esc(card.hiragana)}</div>
+        ` : `
+          <div class="reveal-en">${esc(card.english)}</div>
+        `}
+        <button class="audio-btn" onclick="speak('${jpText.replace(/'/g,"\\'")}', this)" aria-label="Play audio">▶</button>
+      </div>
+      <div class="grade-row">
+        <button class="grade-btn grade-missed" onclick="grade('again')">Missed</button>
+        <button class="grade-btn grade-remembered" onclick="grade('good')">Remembered</button>
+        <button class="grade-btn grade-instant" onclick="grade('easy')">★ Instant</button>
+      </div>
+    `;
+  } else {
+    revealHtml = `<button class="reveal-cta" onclick="reveal()">Reveal</button>`;
+  }
+
+  const cornerTag = isPhrase
+    ? `<div class="pos-tag">phrase${card.wordIds && card.wordIds.length ? " · " + card.wordIds.length + " linked word" + (card.wordIds.length === 1 ? "" : "s") : ""}</div>`
+    : `<div class="pos-tag">${esc(card.partOfSpeech || "")}</div>`;
+
+  return `
+    <div class="card">
+      ${cornerTag}
+      ${!isPhrase && card.source === "custom" ? `<div class="custom-tag">custom</div>` : ""}
+      ${promptHtml}
+      ${revealHtml}
+    </div>
+    <div class="progress-track"><div class="progress-fill" style="width:${Math.round((state.qIndex / state.queue.length) * 100)}%"></div></div>
+  `;
+}
+
+function renderStudyView(){
+  const c = counts();
+  return `
+    ${renderHeader()}
+    <div class="mode-switch">
+      <button class="mode-btn ${state.mode === 'vocab' ? 'active' : ''}" onclick="switchMode('vocab')">Vocab</button>
+      <button class="mode-btn ${state.mode === 'reading' ? 'active' : ''}" onclick="switchMode('reading')">Reading</button>
+      <button class="mode-btn ${state.mode === 'phrase' ? 'active' : ''}" onclick="switchMode('phrase')">Phrases</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-num">${c.New}</div><div class="stat-label" title="Never studied yet">New</div></div>
+      <div class="stat"><div class="stat-num">${c.Learning}</div><div class="stat-label" title="Recently marked Missed — being re-learned with short gaps between reviews">Learning</div></div>
+      <div class="stat"><div class="stat-num">${c.Review}</div><div class="stat-label" title="Graduated — intervals now measured in days, growing as you keep getting it right">Review</div></div>
+    </div>
+    <div class="card-area" id="card-area">
+      ${renderStudyCardArea()}
+    </div>
+    <div class="footer-link" onclick="resetProgress()">Reset progress</div>
+  `;
+}
+
+function renderLibraryView(){
+  const q = state.librarySearch.trim().toLowerCase();
+  const results = q
+    ? ALL_WORDS.filter(w =>
+        w.english.toLowerCase().includes(q) ||
+        w.kanji.includes(q) ||
+        w.hiragana.includes(q) ||
+        (w.partOfSpeech || "").toLowerCase().includes(q) ||
+        (w.tags || []).join(" ").toLowerCase().includes(q)
+      )
+    : ALL_WORDS;
+
+  const rows = results.map(w => `
+    <div class="word-row">
+      <div style="cursor:pointer; flex:1;" onclick="openEditForm('${w.id}')">
+        <div class="word-row-jp jp">${esc(w.kanji)} <span class="word-row-hira jp">${esc(w.hiragana)}</span></div>
+        <div class="word-row-en">${esc(w.english)}${w.source ? " · " + esc(w.source) : ""}</div>
+      </div>
+      <div class="word-row-status">${state.progress[w.id] ? state.progress[w.id].status : "New"}</div>
+      <button class="word-row-delete" onclick="deleteWord('${w.id}')" aria-label="Delete ${esc(w.english)}">×</button>
+    </div>
+  `).join("");
+
+  const msg = state.addFormMessage
+    ? `<div class="${state.addFormMessage.type === 'warning' ? 'form-warning' : 'form-success'}" style="margin-bottom:14px;">${esc(state.addFormMessage.text)}</div>`
+    : "";
+
+  const editing = state.formMode === "edit" ? ALL_WORDS.find(w => w.id === state.editingId) : null;
+  const v = (field) => editing ? esc(editing[field] || "") : "";
+  const vTags = editing ? esc((editing.tags || []).join(", ")) : "";
+
+  const form = state.formMode ? `
+    <form class="add-form" id="word-form" onsubmit="submitWordForm(event)">
+      <div class="form-row-title">${state.formMode === "edit" ? "Edit word" : "Add a word"}</div>
+      <div>
+        <label class="form-label">English *</label>
+        <input class="form-input" name="english" required value="${v('english')}" />
+      </div>
+      <div>
+        <label class="form-label">Kanji *</label>
+        <input class="form-input jp" name="kanji" required value="${v('kanji')}" />
+      </div>
+      <div>
+        <label class="form-label">Hiragana *</label>
+        <input class="form-input jp" name="hiragana" required value="${v('hiragana')}" />
+      </div>
+      <div>
+        <label class="form-label">Part of speech</label>
+        <input class="form-input" name="partOfSpeech" placeholder="verb, noun, adjective…" value="${v('partOfSpeech')}" />
+      </div>
+      <div>
+        <label class="form-label">Tags (comma-separated)</label>
+        <input class="form-input" name="tags" placeholder="anime, JLPT N5…" value="${vTags}" />
+      </div>
+      <div>
+        <label class="form-label">Source</label>
+        <input class="form-input" name="source" placeholder="textbook, app, personal list…" value="${v('source')}" />
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button type="submit" class="form-submit" style="flex:1;">${state.formMode === "edit" ? "Save changes" : "Add to library"}</button>
+        <button type="button" class="form-cancel" onclick="closeForm()">Cancel</button>
+      </div>
+    </form>
+  ` : "";
+
+  return `
+    ${renderHeader()}
+    <input id="lib-search-input" class="search-input" placeholder="Search by english, kanji, hiragana, or tag" value="${esc(state.librarySearch)}" oninput="updateSearch(this.value)" />
+    <div class="word-count">${results.length} of ${ALL_WORDS.length} words</div>
+    ${msg}
+    ${state.formMode !== "add" ? `<button class="add-word-toggle" onclick="openAddForm()">+ Add word</button>` : ""}
+    ${form}
+    <div class="word-list">${rows || '<div class="word-row-en" style="padding:10px 2px;">No matches.</div>'}</div>
+  `;
+}
+
+function renderPhrasesView(){
+  const q = state.phraseSearch.trim().toLowerCase();
+  const results = q
+    ? PHRASES.filter(p =>
+        p.english.toLowerCase().includes(q) ||
+        p.japanese.includes(q) ||
+        p.hiragana.includes(q) ||
+        (p.tags || []).join(" ").toLowerCase().includes(q)
+      )
+    : PHRASES;
+
+  const rows = results.map(p => `
+    <div class="word-row">
+      <div style="cursor:pointer; flex:1;" onclick="openEditPhraseForm('${p.id}')">
+        <div class="word-row-jp jp">${esc(p.japanese)}</div>
+        <div class="word-row-hira jp" style="font-size:12px;">${esc(p.hiragana)}</div>
+        <div class="word-row-en">${esc(p.english)}${p.wordIds && p.wordIds.length ? ` · ${p.wordIds.length} linked word${p.wordIds.length === 1 ? "" : "s"}` : ""}</div>
+      </div>
+      <div class="word-row-status">${state.progress[p.id] ? state.progress[p.id].status : "New"}</div>
+      <button class="word-row-delete" onclick="deletePhrase('${p.id}')" aria-label="Delete ${esc(p.english)}">×</button>
+    </div>
+  `).join("");
+
+  const msg = state.phraseFormMessage
+    ? `<div class="${state.phraseFormMessage.type === 'warning' ? 'form-warning' : 'form-success'}" style="margin-bottom:14px;">${esc(state.phraseFormMessage.text)}</div>`
+    : "";
+
+  let analysisHtml = "";
+  if (state.phraseFormMode && state.phraseAnalysis){
+    const { knownIds, unknownSpans } = state.phraseAnalysis;
+    const knownChips = knownIds.map(id => {
+      const w = ALL_WORDS.find(x => x.id === id);
+      return w ? `<span class="chip chip-known jp">${esc(w.kanji)} <span style="font-weight:400;">(${esc(w.english)})</span></span>` : "";
+    }).join("");
+
+    const unknownCards = unknownSpans.map((span, idx) => `
+      <div class="unknown-word-card">
+        <div class="unknown-kanji jp">${esc(span)}</div>
+        <input id="unk-hira-${idx}" class="form-input jp" placeholder="hiragana reading" />
+        <input id="unk-en-${idx}" class="form-input" placeholder="English meaning" />
+        <div style="display:flex; gap:6px;">
+          <button type="button" class="form-submit" style="flex:1;" onclick="addUnknownWord(${idx})">Add this word</button>
+          <button type="button" class="form-cancel" onclick="ignoreUnknownWord(${idx})">Ignore for now</button>
+        </div>
+      </div>
+    `).join("");
+
+    analysisHtml = `
+      <div class="analysis-box">
+        ${unknownSpans.length > 0
+          ? `<div class="form-warning">This phrase contains ${unknownSpans.length} vocabulary word${unknownSpans.length === 1 ? "" : "s"} that ${unknownSpans.length === 1 ? "isn't" : "aren't"} in your library.</div>`
+          : (knownIds.length > 0 ? `<div class="form-success">Every word in this phrase is already in your library.</div>` : "")
+        }
+        ${knownChips ? `<div class="chip-row">${knownChips}</div>` : ""}
+        ${unknownCards}
+      </div>
+    `;
+  }
+
+  const d = state.phraseDraft || { japanese:"", hiragana:"", english:"", tags:"", source:"" };
+  const form = state.phraseFormMode ? `
+    <form class="add-form" id="phrase-form" onsubmit="submitPhraseForm(event)">
+      <div class="form-row-title">${state.phraseFormMode === "edit" ? "Edit phrase" : "Add a phrase"}</div>
+      <div>
+        <label class="form-label">Japanese phrase *</label>
+        <textarea class="form-input jp" name="japanese" required rows="2">${esc(d.japanese)}</textarea>
+      </div>
+      <button type="button" class="form-cancel" onclick="checkPhraseWords()">Check vocabulary</button>
+      ${analysisHtml}
+      <div>
+        <label class="form-label">Hiragana reading *</label>
+        <input class="form-input jp" name="hiragana" required value="${esc(d.hiragana)}" />
+      </div>
+      <div>
+        <label class="form-label">English meaning *</label>
+        <input class="form-input" name="english" required value="${esc(d.english)}" />
+      </div>
+      <div>
+        <label class="form-label">Tags (comma-separated)</label>
+        <input class="form-input" name="tags" placeholder="anime, JLPT N5…" value="${esc(d.tags)}" />
+      </div>
+      <div>
+        <label class="form-label">Source</label>
+        <input class="form-input" name="source" placeholder="textbook, app, personal list…" value="${esc(d.source)}" />
+      </div>
+      <div style="display:flex; gap:8px;">
+        <button type="submit" class="form-submit" style="flex:1;">${state.phraseFormMode === "edit" ? "Save changes" : "Save phrase"}</button>
+        <button type="button" class="form-cancel" onclick="closePhraseForm()">Cancel</button>
+      </div>
+    </form>
+  ` : "";
+
+  return `
+    ${renderHeader()}
+    <input class="search-input" placeholder="Search by english, kanji, or hiragana" value="${esc(state.phraseSearch)}" oninput="state.phraseSearch=this.value; render(); const el=document.querySelector('.search-input'); if(el){el.focus(); el.value=this.value; el.setSelectionRange(this.value.length,this.value.length);}" />
+    <div class="word-count">${results.length} of ${PHRASES.length} phrases</div>
+    ${msg}
+    ${state.phraseFormMode !== "add" ? `<button class="add-word-toggle" onclick="openAddPhraseForm()">+ Add phrase</button>` : ""}
+    ${form}
+    <div class="word-list">${rows || '<div class="word-row-en" style="padding:10px 2px;">No matches.</div>'}</div>
+  `;
+}
+
+function render(){
+  const root = document.getElementById("root");
+  if (state.view === "library") root.innerHTML = renderLibraryView();
+  else if (state.view === "phrases") root.innerHTML = renderPhrasesView();
+  else root.innerHTML = renderStudyView();
+}
+
+async function init(){
+  customVocab = await loadCustomVocab();
+  baseOverrides = await loadBaseOverrides();
+  baseDeleted = await loadBaseDeleted();
+  idCounter = await loadIdCounter();
+  rebuildAllWords();
+
+  const storedPhrases = await loadPhrases();
+  PHRASES = storedPhrases !== null ? storedPhrases : BASE_PHRASES.slice();
+  if (storedPhrases === null) await savePhrases(PHRASES);
+  phraseIdCounter = await loadPhraseIdCounter();
+
+  state.progress = ensureAllCards(await loadProgress());
+  buildQueue(false);
+  render();
+}
+init();
+</script>
+</body>
+</html>
