@@ -1511,6 +1511,10 @@ function renderStudyCardArea(){
   const isPhrase = state.mode === "phrase";
   const isVocab = state.mode === "vocab";
   const jpText = isPhrase ? card.japanese : card.kanji;
+  // Speak the kana reading, not the kanji. An isolated kanji is ambiguous to
+  // the TTS voice (e.g. 頭 gets read as トウ instead of あたま), so it often
+  // picks the wrong reading. The kana reading is unambiguous.
+  const audioText = card.hiragana || jpText;
 
   const promptHtml = (isVocab || isPhrase)
     ? `<div class="prompt-en">${esc(card.english)}</div>`
@@ -1526,7 +1530,7 @@ function renderStudyCardArea(){
         ` : `
           <div class="reveal-en">${esc(card.english)}</div>
         `}
-        <button class="audio-btn" onclick="speak('${jpText.replace(/'/g,"\\'")}', this)" aria-label="Play audio">▶</button>
+        <button class="audio-btn" onclick="speak('${audioText.replace(/'/g,"\\'")}', this)" aria-label="Play audio">▶</button>
       </div>
       <div class="grade-row">
         <button class="grade-btn grade-missed" onclick="grade('again')">Missed</button>
