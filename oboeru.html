@@ -835,6 +835,28 @@ textarea.form-input{
 </script>
 
 <script>
+// Persistence fallback: when the host does not provide window.storage
+// (e.g. a plain browser or GitHub Pages), back it with localStorage so that
+// progress, custom words, edited/deleted base words, and phrases survive a
+// page reload. When the host provides window.storage, this block is skipped
+// and host behavior is unchanged.
+if (!window.storage) {
+  window.storage = {
+    get(key){
+      try { const v = localStorage.getItem(key); return Promise.resolve(v === null ? null : { value: v }); }
+      catch(e){ return Promise.resolve(null); }
+    },
+    set(key, value){
+      try { localStorage.setItem(key, value); } catch(e){}
+      return Promise.resolve();
+    },
+    delete(key){
+      try { localStorage.removeItem(key); } catch(e){}
+      return Promise.resolve();
+    }
+  };
+}
+
 const BASE_VOCAB = JSON.parse(document.getElementById("vocab-data").textContent);
 const BASE_PHRASES = JSON.parse(document.getElementById("phrase-data").textContent);
 
