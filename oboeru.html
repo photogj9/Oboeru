@@ -933,6 +933,7 @@ let state = {
   qIndex: 0,
   revealed: false,
   sessionReviewed: 0,
+  lastShownId: null,
   librarySearch: "",
   formMode: null,
   editingId: null,
@@ -1076,13 +1077,39 @@ function ensureAllCards(progress){
   return progress;
 }
 
+// --- V1 study selection: randomized order, weighted so weak items come back
+// more and strong items less (but never disappear). Shared by all three modes
+// (vocab / reading / phrase) since they all build the queue through here.
+function reviewWeight(rec){
+  if (!rec || rec.status === "New") return 3;      // keep introducing unseen items
+  if (rec.status === "Learning") return 4;         // "Missed" — resurface sooner / more often
+  // "Review" (graded Remembered or Instant). Instant raises ease above the
+  // 2.5 default, so lean on that to show it less — but never to zero.
+  return rec.ease >= 2.6 ? 1 : 2;                  // Instant : Remembered
+}
+
+// Weighted shuffle (Efraimidis–Spirakis): key = rand^(1/weight), sort desc.
+// Higher weight tends to sort earlier, so heavier items are both more likely
+// to make the session cut and to appear sooner — while order stays random.
+function weightedShuffle(cards){
+  return cards
+    .map(c => ({ c, key: Math.pow(Math.random() || 1e-9, 1 / reviewWeight(state.progress[c.id])) }))
+    .sort((a, b) => b.key - a.key)
+    .map(x => x.c);
+}
+
 function buildQueue(all){
   const pool = currentPool();
   const now = Date.now();
   let due = pool.filter(c => (state.progress[c.id].nextReview || 0) <= now);
-  due.sort((a,b) => (state.progress[a.id].nextReview - state.progress[b.id].nextReview) || (pool.indexOf(a) - pool.indexOf(b)));
+  due = weightedShuffle(due);
   if (!all) due = due.slice(0, SESSION_GOAL);
-  state.queue = due.map(c => c.id);
+  let ids = due.map(c => c.id);
+  // Don't open a fresh session with the exact item just shown.
+  if (ids.length > 1 && ids[0] === state.lastShownId){
+    ids.push(ids.shift());
+  }
+  state.queue = ids;
   state.qIndex = 0;
   state.revealed = false;
   state.sessionReviewed = 0;
@@ -1098,6 +1125,7 @@ function counts(){
 function grade(quality){
   const id = state.queue[state.qIndex];
   const rec = state.progress[id];
+  state.lastShownId = id;
   rec.reviews += 1;
   rec.lastReviewed = Date.now();
   if (quality !== "again") rec.correct += 1;
