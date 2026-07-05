@@ -954,7 +954,9 @@ function rebuildAllWords(){
 }
 
 function currentPool(){
-  return state.mode === "phrase" ? PHRASES : ALL_WORDS;
+  if (state.mode === "phrase") return PHRASES;
+  if (state.mode === "reading") return masteredWords();   // gated on Vocab mastery
+  return ALL_WORDS;
 }
 
 let cachedVoices = [];
@@ -1145,6 +1147,23 @@ function modeRec(id, mode){
 function statusFor(id, mode){
   const e = state.progress[id];
   return e && e[mode] ? e[mode].status : "New";
+}
+// A word is "mastered" in Vocab — and thus eligible for Reading Recall — once
+// it has graduated to Review with at least two successful recalls (Remembered
+// or Instant) and isn't currently backsliding (a recent Miss resets streak).
+// Single source of truth so the bar is easy to tune.
+function isMastered(rec){
+  return !!rec && rec.status === "Review"
+    && (rec.remembered + rec.instant) >= 2
+    && rec.streak >= 1;
+}
+// Words whose Vocab record is mastered, without materializing any records
+// (read-only): used to gate the Reading pool.
+function masteredWords(){
+  return ALL_WORDS.filter(w => {
+    const e = state.progress[w.id];
+    return isMastered(e && e.vocab);
+  });
 }
 function ensureAllCards(progress){
   ALL_WORDS.concat(PHRASES).forEach(c => { if (!progress[c.id]) progress[c.id] = {}; });
@@ -1586,12 +1605,21 @@ function renderStudyCardArea(){
     const stillDue = pool.some(card => (modeRec(card.id).nextReview || 0) <= Date.now());
     if (state.sessionReviewed === 0 && state.queue.length === 0){
       if (pool.length === 0){
-        return state.mode === "phrase" ? `
+        if (state.mode === "phrase") return `
           <div class="empty-state">
             <div class="empty-title">No phrases yet</div>
             <div class="empty-body">Add a phrase and it'll show up here for review.</div>
             <button class="empty-btn" onclick="goPhrases()">Add a phrase</button>
-          </div>` : `
+          </div>`;
+        // Reading is gated on Vocab mastery: if there are words but none are
+        // mastered yet, guide the user back to Vocab rather than show an empty deck.
+        if (state.mode === "reading" && ALL_WORDS.length > 0) return `
+          <div class="empty-state">
+            <div class="empty-title">Reading is locked for now</div>
+            <div class="empty-body">Reading Recall uses words you've mastered in Vocab. Keep studying Vocab and words will unlock here.</div>
+            <button class="empty-btn" onclick="switchMode('vocab')">Study Vocab</button>
+          </div>`;
+        return `
           <div class="empty-state">
             <div class="empty-title">No words yet</div>
             <div class="empty-body">Add a word to your library to start studying.</div>
