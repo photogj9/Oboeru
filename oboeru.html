@@ -1008,6 +1008,59 @@ async function saveProgress(progress){
   try{ await window.storage.set("oboeru-progress", JSON.stringify(progress), false); }
   catch(e){ console.error("save failed", e); }
 }
+const PROGRESS_SCHEMA = 2;
+async function loadProgressSchema(){
+  try{
+    const res = await window.storage.get("oboeru-progress-schema", false);
+    return res ? JSON.parse(res.value) : 1;
+  }catch(e){ return 1; }
+}
+async function saveProgressSchema(v){
+  try{ await window.storage.set("oboeru-progress-schema", JSON.stringify(v), false); }
+  catch(e){ console.error("save failed", e); }
+}
+// Convert one legacy flat record into a per-mode record. Grade counters are
+// backfilled from what the old shape knew: correct answers become
+// "remembered", the rest "missed"; Instant history is unknown, so 0.
+function migrateFlatRecord(old){
+  const reviews = old.reviews || 0;
+  const correct = old.correct || 0;
+  return {
+    status: old.status || "New",
+    introduced: reviews > 0,
+    reviews,
+    lastReviewed: old.lastReviewed || null,
+    nextReview: old.nextReview || 0,
+    ease: old.ease || 2.5,
+    interval: old.interval || 0,
+    missed: Math.max(0, reviews - correct),
+    remembered: correct,
+    instant: 0,
+    streak: old.status === "Learning" ? 0 : (correct > 0 ? 1 : 0)
+  };
+}
+// One-time, idempotent migration from the old flat progress shape (one record
+// per item) to the new per-mode shape (state.progress[id] = { vocab | reading |
+// phrase }). Words migrate into .vocab, phrases into .phrase; Reading
+// deliberately resets to fresh so it can later be gated on demonstrated Vocab
+// mastery. Records already in the new shape are left untouched, so re-running
+// this is safe.
+function migrateProgress(raw){
+  const phraseIds = new Set(PHRASES.map(p => p.id));
+  const out = {};
+  for (const id in raw){
+    const r = raw[id];
+    if (!r || typeof r !== "object"){ out[id] = {}; continue; }
+    if (r.vocab || r.reading || r.phrase){ out[id] = r; continue; }   // already new shape
+    if (typeof r.status === "string"){
+      out[id] = phraseIds.has(id) ? { phrase: migrateFlatRecord(r) }
+                                  : { vocab: migrateFlatRecord(r) };
+    } else {
+      out[id] = {};
+    }
+  }
+  return out;
+}
 async function loadCustomVocab(){
   try{
     const res = await window.storage.get("oboeru-custom-vocab", false);
@@ -1069,11 +1122,32 @@ async function savePhraseIdCounter(n){
   catch(e){ console.error("save failed", e); }
 }
 
+// A per-mode study record. Each item keeps one of these per study mode
+// (vocab / reading / phrase) under state.progress[id][mode], so the three
+// modes track status and grade history independently.
 function defaultRecord(){
-  return { reviews:0, correct:0, lastReviewed:null, nextReview:0, ease:2.5, interval:0, status:"New" };
+  return {
+    status:"New", introduced:false,
+    reviews:0, lastReviewed:null, nextReview:0, ease:2.5, interval:0,
+    missed:0, remembered:0, instant:0, streak:0
+  };
+}
+// Get (creating on demand) the record for an item in a given mode.
+function modeRec(id, mode){
+  mode = mode || state.mode;
+  let entry = state.progress[id];
+  if (!entry) entry = state.progress[id] = {};
+  if (!entry[mode]) entry[mode] = defaultRecord();
+  return entry[mode];
+}
+// Read-only status for the library rows: never materializes a record, so
+// unseen items simply read as "New".
+function statusFor(id, mode){
+  const e = state.progress[id];
+  return e && e[mode] ? e[mode].status : "New";
 }
 function ensureAllCards(progress){
-  ALL_WORDS.concat(PHRASES).forEach(c => { if (!progress[c.id]) progress[c.id] = defaultRecord(); });
+  ALL_WORDS.concat(PHRASES).forEach(c => { if (!progress[c.id]) progress[c.id] = {}; });
   return progress;
 }
 
@@ -1093,7 +1167,7 @@ function reviewWeight(rec){
 // to make the session cut and to appear sooner — while order stays random.
 function weightedShuffle(cards){
   return cards
-    .map(c => ({ c, key: Math.pow(Math.random() || 1e-9, 1 / reviewWeight(state.progress[c.id])) }))
+    .map(c => ({ c, key: Math.pow(Math.random() || 1e-9, 1 / reviewWeight(modeRec(c.id))) }))
     .sort((a, b) => b.key - a.key)
     .map(x => x.c);
 }
@@ -1101,7 +1175,7 @@ function weightedShuffle(cards){
 function buildQueue(all){
   const pool = currentPool();
   const now = Date.now();
-  let due = pool.filter(c => (state.progress[c.id].nextReview || 0) <= now);
+  let due = pool.filter(c => (modeRec(c.id).nextReview || 0) <= now);
   due = weightedShuffle(due);
   if (!all) due = due.slice(0, SESSION_GOAL);
   let ids = due.map(c => c.id);
@@ -1118,19 +1192,20 @@ function buildQueue(all){
 function counts(){
   const pool = currentPool();
   const c = { New:0, Learning:0, Review:0 };
-  pool.forEach(card => { c[state.progress[card.id].status]++; });
+  pool.forEach(card => { c[modeRec(card.id).status]++; });
   return c;
 }
 
 function grade(quality){
   const id = state.queue[state.qIndex];
-  const rec = state.progress[id];
+  const rec = modeRec(id);
   state.lastShownId = id;
   rec.reviews += 1;
   rec.lastReviewed = Date.now();
-  if (quality !== "again") rec.correct += 1;
 
   if (quality === "again"){
+    rec.missed += 1;
+    rec.streak = 0;
     rec.ease = Math.max(1.3, rec.ease - 0.2);
     rec.interval = 0;
     rec.status = "Learning";
@@ -1138,10 +1213,14 @@ function grade(quality){
     const requeueAt = Math.min(state.qIndex + 4, state.queue.length);
     state.queue.splice(requeueAt, 0, id);
   } else if (quality === "good"){
+    rec.remembered += 1;
+    rec.streak += 1;
     rec.interval = rec.interval === 0 ? 1 : Math.round(rec.interval * rec.ease);
     rec.status = "Review";
     rec.nextReview = Date.now() + rec.interval * 86400000;
   } else if (quality === "easy"){
+    rec.instant += 1;
+    rec.streak += 1;
     rec.interval = rec.interval === 0 ? 3 : Math.round(rec.interval * rec.ease * 1.3);
     rec.ease = rec.ease + 0.15;
     rec.status = "Review";
@@ -1268,7 +1347,7 @@ async function submitWordForm(ev){
     if (!newWord.source) newWord.source = "custom";
     customVocab.push(newWord);
     rebuildAllWords();
-    state.progress[newWord.id] = defaultRecord();
+    state.progress[newWord.id] = {};
     await saveCustomVocab(customVocab);
     await saveProgress(state.progress);
     state.addFormMessage = { type:"success", text:`Added "${newWord.english}" (${newWord.kanji}) to your library.` };
@@ -1401,7 +1480,7 @@ async function addUnknownWord(idx){
     };
     customVocab.push(newWord);
     rebuildAllWords();
-    state.progress[newWord.id] = defaultRecord();
+    state.progress[newWord.id] = {};
     await saveCustomVocab(customVocab);
     await saveProgress(state.progress);
   }
@@ -1445,7 +1524,7 @@ async function submitPhraseForm(ev){
   } else {
     const newPhrase = Object.assign({ id: nextPhraseId(), dateAdded: new Date().toISOString() }, fields);
     PHRASES.push(newPhrase);
-    state.progress[newPhrase.id] = defaultRecord();
+    state.progress[newPhrase.id] = {};
     await saveProgress(state.progress);
     state.phraseFormMessage = { type:"success", text:`Added "${english}" to your phrases.` };
   }
@@ -1504,7 +1583,7 @@ function renderStudyCardArea(){
   const pool = currentPool();
 
   if (state.qIndex >= state.queue.length){
-    const stillDue = pool.some(card => (state.progress[card.id].nextReview || 0) <= Date.now());
+    const stillDue = pool.some(card => (modeRec(card.id).nextReview || 0) <= Date.now());
     if (state.sessionReviewed === 0 && state.queue.length === 0){
       if (pool.length === 0){
         return state.mode === "phrase" ? `
@@ -1624,7 +1703,7 @@ function renderLibraryView(){
         <div class="word-row-jp jp">${esc(w.kanji)} <span class="word-row-hira jp">${esc(w.hiragana)}</span></div>
         <div class="word-row-en">${esc(w.english)}${w.source ? " · " + esc(w.source) : ""}</div>
       </div>
-      <div class="word-row-status">${state.progress[w.id] ? state.progress[w.id].status : "New"}</div>
+      <div class="word-row-status">${statusFor(w.id, "vocab")}</div>
       <button class="word-row-delete" onclick="deleteWord('${w.id}')" aria-label="Delete ${esc(w.english)}">×</button>
     </div>
   `).join("");
@@ -1700,7 +1779,7 @@ function renderPhrasesView(){
         <div class="word-row-hira jp" style="font-size:12px;">${esc(p.hiragana)}</div>
         <div class="word-row-en">${esc(p.english)}${p.wordIds && p.wordIds.length ? ` · ${p.wordIds.length} linked word${p.wordIds.length === 1 ? "" : "s"}` : ""}</div>
       </div>
-      <div class="word-row-status">${state.progress[p.id] ? state.progress[p.id].status : "New"}</div>
+      <div class="word-row-status">${statusFor(p.id, "phrase")}</div>
       <button class="word-row-delete" onclick="deletePhrase('${p.id}')" aria-label="Delete ${esc(p.english)}">×</button>
     </div>
   `).join("");
@@ -1804,7 +1883,13 @@ async function init(){
   if (storedPhrases === null) await savePhrases(PHRASES);
   phraseIdCounter = await loadPhraseIdCounter();
 
-  state.progress = ensureAllCards(await loadProgress());
+  const storedProgress = await loadProgress();
+  const schema = await loadProgressSchema();
+  state.progress = ensureAllCards(migrateProgress(storedProgress));
+  if (schema < PROGRESS_SCHEMA){
+    await saveProgress(state.progress);
+    await saveProgressSchema(PROGRESS_SCHEMA);
+  }
   buildQueue(false);
   render();
 }
