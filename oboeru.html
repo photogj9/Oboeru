@@ -1149,12 +1149,14 @@ function statusFor(id, mode){
   return e && e[mode] ? e[mode].status : "New";
 }
 // A word is "mastered" in Vocab — and thus eligible for Reading Recall — once
-// it has graduated to Review with at least two successful recalls (Remembered
-// or Instant) and isn't currently backsliding (a recent Miss resets streak).
+// it has graduated to Review, isn't currently backsliding (a recent Miss resets
+// streak), and has enough successful recalls. Instant is strong evidence (worth
+// 2 points); a plain Remembered is worth 1. So a single Instant masters
+// immediately, or two Remembered do — but one lucky Remembered tap does not.
 // Single source of truth so the bar is easy to tune.
 function isMastered(rec){
   return !!rec && rec.status === "Review"
-    && (rec.remembered + rec.instant) >= 2
+    && (rec.instant * 2 + rec.remembered) >= 2
     && rec.streak >= 1;
 }
 // Words whose Vocab record is mastered, without materializing any records
