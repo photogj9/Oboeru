@@ -222,10 +222,21 @@ body{
   border-top:1px solid var(--line);
   width:100%;
 }
+.teach-example-jp{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
 .teach-example .jp{
   font-family:'Noto Sans JP',sans-serif;
   font-size:18px;
   font-weight:500;
+}
+.audio-btn-sm{
+  width:30px;
+  height:30px;
+  font-size:13px;
 }
 .teach-example-en{
   font-size:13px;
@@ -1719,9 +1730,13 @@ function renderStudyCardArea(){
   if (!modeRec(id).introduced){
     const jp = isPhrase ? card.japanese : card.kanji;
     const teachAudio = card.hiragana || jp;
+    const exampleAudio = card.exampleHiragana || card.exampleJapanese || "";
     const exampleHtml = (!isPhrase && card.exampleJapanese) ? `
       <div class="teach-example">
-        <div class="jp">${esc(card.exampleJapanese)}</div>
+        <div class="teach-example-jp">
+          <span class="jp">${esc(card.exampleJapanese)}</span>
+          <button class="audio-btn audio-btn-sm" onclick="speak('${exampleAudio.replace(/'/g,"\\'")}', this)" aria-label="Play example audio">▶</button>
+        </div>
         ${card.exampleEnglish ? `<div class="teach-example-en">${esc(card.exampleEnglish)}</div>` : ""}
       </div>` : "";
     return `
