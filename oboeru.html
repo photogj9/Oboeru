@@ -951,6 +951,8 @@ function analyzePhrase(text, vocabPool){
 }
 const SESSION_GOAL = 20;
 const NEW_PER_SESSION = 5;   // cap on brand-new (never-introduced) items per session
+const LEARNING_CAP = 8;      // stop introducing new items while this many are still in Learning
+const PRACTICE_RETRIES = 2;  // immediate-practice re-teach retries on a miss before moving on
 
 let ALL_WORDS = [];
 let customVocab = [];
@@ -970,6 +972,7 @@ let state = {
   revealed: false,
   sessionReviewed: 0,
   lastShownId: null,
+  introAttempts: {},
   librarySearch: "",
   formMode: null,
   editingId: null,
@@ -1229,45 +1232,48 @@ function weightedShuffle(cards){
     .map(x => x.c);
 }
 
-// Spread new items through the recall list so first exposures are never the
-// first card and never back-to-back. Best-effort: when new items outnumber
-// recall cards, some new items unavoidably end up next to each other.
-function interleaveNew(recallIds, newIds){
-  if (newIds.length === 0) return recallIds.slice();
-  if (recallIds.length === 0) return newIds.slice();
-  const out = recallIds.slice();
-  const L = recallIds.length, n = newIds.length;
-  // Insert each new item before an evenly spaced recall index in 1..L (never
-  // index 0). Insert from the back so the smaller indices stay valid.
-  for (let k = n - 1; k >= 0; k--){
-    let pos = Math.round(L * (k + 1) / (n + 1));
-    if (pos < 1) pos = 1;
-    out.splice(pos, 0, newIds[k]);
-  }
-  return out;
-}
-
 function buildQueue(all){
   const pool = currentPool();
   const now = Date.now();
   const due = pool.filter(c => (modeRec(c.id).nextReview || 0) <= now);
-  // Split due items into brand-new (never introduced -> teaching card) and
-  // recall (already introduced). Cap new items; fill the rest with recall.
+  // Split due items into brand-new (never introduced -> teaching phase) and
+  // recall (already introduced).
   const fresh = [], recall = [];
   due.forEach(c => (modeRec(c.id).introduced ? recall : fresh).push(c));
-  const newItems = weightedShuffle(fresh).slice(0, NEW_PER_SESSION);
+
+  // Backlog gate: only introduce new items while the Learning pile has room, so
+  // sessions consolidate half-learned items instead of piling on more.
+  const learningCount = pool.filter(c => modeRec(c.id).status === "Learning").length;
+  const newBudget = Math.max(0, Math.min(NEW_PER_SESSION, LEARNING_CAP - learningCount));
+  const newItems = weightedShuffle(fresh).slice(0, newBudget);
+
   let recallItems = weightedShuffle(recall);
   if (!all) recallItems = recallItems.slice(0, Math.max(0, SESSION_GOAL - newItems.length));
-  let ids = interleaveNew(recallItems.map(c => c.id), newItems.map(c => c.id));
-  // Don't open a fresh session with the exact item just shown.
-  if (ids.length > 1 && ids[0] === state.lastShownId){
-    ids.push(ids.shift());
+
+  // Front learning phase: Teach -> Immediate Practice for each new item, in order.
+  const learningPhase = [];
+  newItems.forEach(c => {
+    learningPhase.push({ id: c.id, step: "teach" });
+    learningPhase.push({ id: c.id, step: "practice" });
+  });
+  // Review phase: due recalls + the new items, randomized together.
+  const reviewPhase = weightedShuffle(recallItems.concat(newItems))
+    .map(c => ({ id: c.id, step: "review" }));
+
+  const queue = learningPhase.concat(reviewPhase);
+  // When there's no learning phase, don't open with the exact item just shown.
+  if (learningPhase.length === 0 && queue.length > 1 && queue[0].id === state.lastShownId){
+    queue.push(queue.shift());
   }
-  state.queue = ids;
+  state.queue = queue;
   state.qIndex = 0;
   state.revealed = false;
   state.sessionReviewed = 0;
+  state.introAttempts = {};
 }
+
+// The queue holds { id, step } entries (step: teach | practice | review).
+function curEntry(){ return state.queue[state.qIndex]; }
 
 function counts(){
   const pool = currentPool();
@@ -1277,7 +1283,7 @@ function counts(){
 }
 
 function grade(quality){
-  const id = state.queue[state.qIndex];
+  const id = curEntry().id;
   const rec = modeRec(id);
   state.lastShownId = id;
   rec.reviews += 1;
@@ -1291,7 +1297,7 @@ function grade(quality){
     rec.status = "Learning";
     rec.nextReview = Date.now();
     const requeueAt = Math.min(state.qIndex + 4, state.queue.length);
-    state.queue.splice(requeueAt, 0, id);
+    state.queue.splice(requeueAt, 0, { id, step: "review" });
   } else if (quality === "good"){
     rec.remembered += 1;
     rec.streak += 1;
@@ -1333,20 +1339,37 @@ function switchMode(mode){
 }
 function reveal(){ state.revealed = true; render(); }
 
-// Acknowledge a first-exposure teaching card: mark it introduced, move it into
-// Learning, and re-queue it later in the SAME session (spaced) so its first
-// graded recall comes after some distance — not immediately, not back-to-back.
-function introduce(){
-  const id = state.queue[state.qIndex];
+// Finish a teaching card and advance to its immediate practice. Mark the item
+// introduced + Learning so future sessions treat it as recall (not a fresh
+// teach) and it counts toward the Learning backlog gate. The immediate practice
+// that follows is next in the queue.
+function startPractice(){
+  const id = curEntry().id;
   const rec = modeRec(id);
   rec.introduced = true;
-  rec.status = "Learning";
-  rec.nextReview = Date.now();
+  if (rec.status === "New") rec.status = "Learning";
   saveProgress(state.progress);
   state.lastShownId = id;
   state.qIndex += 1;
-  const at = Math.min(state.qIndex + 5, state.queue.length);
-  state.queue.splice(at, 0, id);
+  state.revealed = false;
+  render();
+}
+
+// Immediate-practice result. Deliberately transient: neither Got it nor Missed
+// touches scheduling or mastery — seconds-later recall isn't evidence of
+// retention. On a miss (within the retry cap) re-teach then re-practice the
+// item right away; past the cap, move on with no persisted effect either way.
+function practiceResult(result){
+  const id = curEntry().id;
+  state.lastShownId = id;
+  if (result === "missed"){
+    const attempts = (state.introAttempts[id] || 0) + 1;
+    state.introAttempts[id] = attempts;
+    if (attempts <= PRACTICE_RETRIES){
+      state.queue.splice(state.qIndex + 1, 0, { id, step: "teach" }, { id, step: "practice" });
+    }
+  }
+  state.qIndex += 1;
   state.revealed = false;
   render();
 }
@@ -1720,14 +1743,15 @@ function renderStudyCardArea(){
       </div>`;
   }
 
-  const id = state.queue[state.qIndex];
+  const entry = curEntry();
+  const id = entry.id;
   const card = pool.find(x => x.id === id);
   const isPhrase = state.mode === "phrase";
   const isVocab = state.mode === "vocab";
 
-  // First exposure: a non-graded teaching card. Shows the item fully (both
-  // sides + audio + example) regardless of mode, then "Start learning".
-  if (!modeRec(id).introduced){
+  // Teach step: a non-graded teaching card. Shows the item fully (both sides +
+  // audio + example) regardless of mode, then advances to immediate practice.
+  if (entry.step === "teach"){
     const jp = isPhrase ? card.japanese : card.kanji;
     const teachAudio = card.hiragana || jp;
     const exampleAudio = card.exampleHiragana || card.exampleJapanese || "";
@@ -1749,7 +1773,7 @@ function renderStudyCardArea(){
           <button class="audio-btn" onclick="speak('${teachAudio.replace(/'/g,"\\'")}', this)" aria-label="Play audio">▶</button>
         </div>
         ${exampleHtml}
-        <button class="reveal-cta" onclick="introduce()">Start learning</button>
+        <button class="reveal-cta" onclick="startPractice()">Practice now</button>
       </div>
       <div class="progress-track"><div class="progress-fill" style="width:${Math.round((state.qIndex / state.queue.length) * 100)}%"></div></div>
     `;
@@ -1777,11 +1801,18 @@ function renderStudyCardArea(){
         `}
         <button class="audio-btn" onclick="speak('${audioText.replace(/'/g,"\\'")}', this)" aria-label="Play audio">▶</button>
       </div>
+      ${entry.step === "practice" ? `
+      <div class="grade-row">
+        <button class="grade-btn grade-missed" onclick="practiceResult('missed')">Missed</button>
+        <button class="grade-btn grade-remembered" onclick="practiceResult('got')">Got it</button>
+      </div>
+      ` : `
       <div class="grade-row">
         <button class="grade-btn grade-missed" onclick="grade('again')">Missed</button>
         <button class="grade-btn grade-remembered" onclick="grade('good')">Remembered</button>
         <button class="grade-btn grade-instant" onclick="grade('easy')">★ Instant</button>
       </div>
+      `}
     `;
   } else {
     revealHtml = `<button class="reveal-cta" onclick="reveal()">Reveal</button>`;
@@ -1795,6 +1826,7 @@ function renderStudyCardArea(){
     <div class="card">
       ${cornerTag}
       ${!isPhrase && card.source === "custom" ? `<div class="custom-tag">custom</div>` : ""}
+      ${entry.step === "practice" ? `<div class="teach-label">New · practice</div>` : ""}
       ${promptHtml}
       ${revealHtml}
     </div>
