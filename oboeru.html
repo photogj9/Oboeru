@@ -208,6 +208,41 @@ body{
   font-size:18px;
   font-weight:500;
 }
+.teach-label{
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+  color:var(--seal);
+  font-weight:600;
+  margin-bottom:10px;
+}
+.teach-example{
+  margin-top:16px;
+  padding-top:14px;
+  border-top:1px solid var(--line);
+  width:100%;
+}
+.teach-example-jp{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+}
+.teach-example .jp{
+  font-family:'Noto Sans JP',sans-serif;
+  font-size:18px;
+  font-weight:500;
+}
+.audio-btn-sm{
+  width:30px;
+  height:30px;
+  font-size:13px;
+}
+.teach-example-en{
+  font-size:13px;
+  color:var(--ink-soft);
+  margin-top:4px;
+}
 .audio-btn{
   border:1px solid var(--line);
   background:var(--paper);
@@ -915,6 +950,7 @@ function analyzePhrase(text, vocabPool){
   return { knownIds, unknownSpans };
 }
 const SESSION_GOAL = 20;
+const NEW_PER_SESSION = 5;   // cap on brand-new (never-introduced) items per session
 
 let ALL_WORDS = [];
 let customVocab = [];
@@ -1193,13 +1229,36 @@ function weightedShuffle(cards){
     .map(x => x.c);
 }
 
+// Spread new items through the recall list so first exposures are never the
+// first card and never back-to-back. Best-effort: when new items outnumber
+// recall cards, some new items unavoidably end up next to each other.
+function interleaveNew(recallIds, newIds){
+  if (newIds.length === 0) return recallIds.slice();
+  if (recallIds.length === 0) return newIds.slice();
+  const out = recallIds.slice();
+  const L = recallIds.length, n = newIds.length;
+  // Insert each new item before an evenly spaced recall index in 1..L (never
+  // index 0). Insert from the back so the smaller indices stay valid.
+  for (let k = n - 1; k >= 0; k--){
+    let pos = Math.round(L * (k + 1) / (n + 1));
+    if (pos < 1) pos = 1;
+    out.splice(pos, 0, newIds[k]);
+  }
+  return out;
+}
+
 function buildQueue(all){
   const pool = currentPool();
   const now = Date.now();
-  let due = pool.filter(c => (modeRec(c.id).nextReview || 0) <= now);
-  due = weightedShuffle(due);
-  if (!all) due = due.slice(0, SESSION_GOAL);
-  let ids = due.map(c => c.id);
+  const due = pool.filter(c => (modeRec(c.id).nextReview || 0) <= now);
+  // Split due items into brand-new (never introduced -> teaching card) and
+  // recall (already introduced). Cap new items; fill the rest with recall.
+  const fresh = [], recall = [];
+  due.forEach(c => (modeRec(c.id).introduced ? recall : fresh).push(c));
+  const newItems = weightedShuffle(fresh).slice(0, NEW_PER_SESSION);
+  let recallItems = weightedShuffle(recall);
+  if (!all) recallItems = recallItems.slice(0, Math.max(0, SESSION_GOAL - newItems.length));
+  let ids = interleaveNew(recallItems.map(c => c.id), newItems.map(c => c.id));
   // Don't open a fresh session with the exact item just shown.
   if (ids.length > 1 && ids[0] === state.lastShownId){
     ids.push(ids.shift());
@@ -1273,6 +1332,24 @@ function switchMode(mode){
   render();
 }
 function reveal(){ state.revealed = true; render(); }
+
+// Acknowledge a first-exposure teaching card: mark it introduced, move it into
+// Learning, and re-queue it later in the SAME session (spaced) so its first
+// graded recall comes after some distance — not immediately, not back-to-back.
+function introduce(){
+  const id = state.queue[state.qIndex];
+  const rec = modeRec(id);
+  rec.introduced = true;
+  rec.status = "Learning";
+  rec.nextReview = Date.now();
+  saveProgress(state.progress);
+  state.lastShownId = id;
+  state.qIndex += 1;
+  const at = Math.min(state.qIndex + 5, state.queue.length);
+  state.queue.splice(at, 0, id);
+  state.revealed = false;
+  render();
+}
 
 function goLibrary(){ state.view = "library"; state.formMode = null; state.editingId = null; state.addFormMessage = null; render(); }
 function goStudy(){ state.view = "study"; render(); }
@@ -1647,6 +1724,37 @@ function renderStudyCardArea(){
   const card = pool.find(x => x.id === id);
   const isPhrase = state.mode === "phrase";
   const isVocab = state.mode === "vocab";
+
+  // First exposure: a non-graded teaching card. Shows the item fully (both
+  // sides + audio + example) regardless of mode, then "Start learning".
+  if (!modeRec(id).introduced){
+    const jp = isPhrase ? card.japanese : card.kanji;
+    const teachAudio = card.hiragana || jp;
+    const exampleAudio = card.exampleHiragana || card.exampleJapanese || "";
+    const exampleHtml = (!isPhrase && card.exampleJapanese) ? `
+      <div class="teach-example">
+        <div class="teach-example-jp">
+          <span class="jp">${esc(card.exampleJapanese)}</span>
+          <button class="audio-btn audio-btn-sm" onclick="speak('${exampleAudio.replace(/'/g,"\\'")}', this)" aria-label="Play example audio">▶</button>
+        </div>
+        ${card.exampleEnglish ? `<div class="teach-example-en">${esc(card.exampleEnglish)}</div>` : ""}
+      </div>` : "";
+    return `
+      <div class="card">
+        <div class="teach-label">New · first look</div>
+        <div class="prompt-jp jp">${esc(jp)}</div>
+        <div class="prompt-hira jp">${esc(card.hiragana)}</div>
+        <div class="reveal-en" style="margin-top:12px;">${esc(card.english)}</div>
+        <div class="reveal-block" style="margin-top:12px;">
+          <button class="audio-btn" onclick="speak('${teachAudio.replace(/'/g,"\\'")}', this)" aria-label="Play audio">▶</button>
+        </div>
+        ${exampleHtml}
+        <button class="reveal-cta" onclick="introduce()">Start learning</button>
+      </div>
+      <div class="progress-track"><div class="progress-fill" style="width:${Math.round((state.qIndex / state.queue.length) * 100)}%"></div></div>
+    `;
+  }
+
   const jpText = isPhrase ? card.japanese : card.kanji;
   // Speak the kana reading, not the kanji. An isolated kanji is ambiguous to
   // the TTS voice (e.g. 頭 gets read as トウ instead of あたま), so it often
